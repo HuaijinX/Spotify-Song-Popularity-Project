@@ -1,0 +1,55 @@
+---
+title: "EDA"
+author: "Huaijin Xin"
+format: html
+editor: visual
+---
+
+## MA678 Midterm Project EDA report
+
+Here is the EDA report for the spotify_song data set. The report consists description of the data set, cleaning procedure, and EDA plots.
+
+## Datasets:
+
+spotify_songs.csv
+
+The data consist Almost 30000 Spotify songs from the Spotify API. Here is the URL for Datacard
+
+<https://www.kaggle.com/datasets/joebeachcapital/30000-spotify-songs/data>
+
+## Data Cleaning:
+
+Here is view of raw data:
+
+```{r}
+#| echo: false 
+df <- read.csv("spotify_songs.csv")
+head(df)
+```
+
+Check null values.
+
+```{r}
+#| echo: false
+colSums(is.na(df))
+```
+
+Delete all rows which has null values.
+
+```{r}
+#| echo:False
+cleaned_df <- na.omit(df)
+colSums(is.na(cleaned_df))
+```
+
+Check unique values of character value columns:
+
+```{r}
+#| echo:False
+char_cols <- sapply(cleaned_df, is.character)
+unique_char_counts <- sapply(cleaned_df[char_cols], function(x) length(unique(x)))
+unique_char_counts
+
+```
+
+## EDA Plots
