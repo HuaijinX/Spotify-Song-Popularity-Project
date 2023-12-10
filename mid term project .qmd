@@ -1,0 +1,246 @@
+---
+title: "EDA"
+author: "Huaijin Xin"
+format: html
+editor: visual
+---
+
+## MA678 Midterm Project EDA report
+
+Here is the EDA report for the spotify_song data set. The report consists description of the data set, cleaning procedure, and EDA plots.
+
+## Datasets:
+
+spotify_songs.csv
+
+The data consist Almost 30000 Spotify songs from the Spotify API. Here is the URL for Datacard
+
+<https://www.kaggle.com/datasets/joebeachcapital/30000-spotify-songs/data>
+
+## Data Cleaning:
+
+Here is view of raw data:
+
+```{r}
+data <- read.csv("spotify_songs.csv")
+head(data)
+```
+
+Convert date to proper format.
+
+```{r}
+data$track_album_release_date <- as.Date(data$track_album_release_date)
+```
+
+Check null values.
+
+```{r}
+colSums(is.na(data))
+```
+
+Delete all rows which has null values.
+
+```{r}
+library(tidyr)
+data <- data %>% drop_na()
+colSums(is.na(data))
+```
+
+Convert duration from milliseconds to minutes for easier interpretation and delete original column
+
+```{r}
+data$duration_min <- data$duration_ms / 60000
+```
+
+```{r}
+library(dplyr)
+data <- select(data,-duration_ms)
+```
+
+Create new features that may be predictive of popularity: age of the track (current date minus track_album_release_date)
+
+```{r}
+data$track_age_days <- as.numeric(Sys.Date() - data$track_album_release_date)
+
+data$track_age_years <- data$track_age_days / 365.25
+
+data <- select(data,-track_album_release_date)
+```
+
+```{r}
+data <- select(data,-track_age_days)
+```
+
+Check unique values of character value columns:
+
+```{r}
+char_cols <- sapply(data, is.character)
+unique_char_counts <- sapply(data[char_cols], function(x) length(unique(x)))
+unique_char_counts
+
+```
+
+Delete those columns which has so many unique values(track_id, track_name, track_album_name, track_album_id, track_artist, playlist_id, playlist_name).
+
+```{r}
+library(dplyr)
+data <- select(data, -track_id, -track_name, -track_album_name, -track_artist,-track_album_id )
+```
+
+```{r}
+library(dplyr)
+data <- select(data, -playlist_id, -playlist_name )
+```
+
+```{r}
+head(data)
+```
+
+## EDA Plots
+
+#### 1.Distribution of Playlist Genres
+
+```{r}
+library(ggplot2)
+genre_counts <- as.data.frame(table(data$playlist_genre))
+ggplot(genre_counts, aes(x = "", y = Freq, fill = Var1)) +
+    geom_bar(width = 1, stat = "identity") +
+    coord_polar("y", start = 0) +
+    theme_void() +
+    labs(title = "Distribution of Playlist Genres", x = "", y = "", fill = "Genre")
+```
+
+The pie chart shows that there are total 6 big genres of songs. And those 6 genres are evenly distributed among the dataset.
+
+#### 2.Distribution of Track Popularity
+
+```{r}
+ggplot(data, aes(x = track_popularity)) +
+    geom_histogram(bins = 30, fill = "blue", color = "black") +
+    labs(title = "Distribution of Track Popularity", x = "Popularity", y = "Count") +
+    theme_minimal()
+```
+
+-   The histogram indicates that track popularity has a left-skewed distribution, with a large number of tracks having low popularity scores.
+
+-   There is a significant peak at the lower end of the popularity scale, suggesting that many tracks have minimal popularity.
+
+-   The distribution is not uniform and indicates that fewer tracks achieve very high popularity scores.
+
+#### 3.Popularity Across Genres
+
+```{r}
+ggplot(data, aes(x = playlist_genre, y = track_popularity)) +
+    geom_boxplot() +
+    labs(title = "Popularity Across Genres", x = "Genre", y = "Popularity") +
+    theme_minimal()
+
+```
+
+-   The boxplot across different genres shows that the median popularity is roughly consistent across genres, hovering around the 50 mark.
+
+-   There is substantial variability within each genre, as indicated by the interquartile range (the height of the boxes).
+
+-   Outliers exist in all genres, suggesting that there are tracks with popularity scores that are significantly higher or lower than the typical range for their genre.
+
+#### 4.Popularity by Subgenre
+
+```{r}
+ggplot(data, aes(x = playlist_subgenre, y = track_popularity)) + 
+  geom_boxplot() +
+  labs(title = "Popularity by Subgenre", x = "Subgenre", y = "Popularity") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
+```
+
+-   The subgenre boxplot reveals more nuanced differences in popularity distribution. Some subgenres, such as "indie pop", "electropop", and "neo soul", show higher median popularity than others like "album rock" or "hard rock".
+
+-   The variety within subgenres is quite pronounced, with some subgenres showing a wide spread of popularity scores, indicating diversity in how tracks within those subgenres are received in terms of popularity.
+
+-   Certain subgenres also have more outliers, suggesting that there are exceptional tracks that achieve very high popularity outside the general trend of their subgenre.
+
+#### 5.Tempo Distribution Across Genres
+
+```{r}
+ggplot(data, aes(x = playlist_genre, y = tempo)) +
+    geom_violin(trim = FALSE) +
+    labs(title = "Tempo Distribution Across Genres", x = "Genre", y = "Tempo") +
+    theme_minimal()
+
+```
+
+-   **DM**: The Electronic Dance Music (EDM) genre shows a very tight distribution of tempos, centered around a specific range, indicating a strong consistency in tempo, typical for dance tracks.
+
+-   **Latin**: The Latin genre has a wider distribution, suggesting a variety of tempos, but with a concentration of tracks at a tempo lower than EDM's median.
+
+-   **Pop**: Pop music shows a broad distribution, which is expected as pop music can encompass a wide range of substyles, each with its tempo.
+
+-   **R&B**: Rhythm and Blues (R&B) also has a broad distribution, with a slightly lower median tempo than pop.
+
+-   **Rap**: The rap genre has a distribution similar to R&B, indicating a diversity of tempos within rap music.
+
+-   **Rock**: Rock music has a broad distribution as well, but with some tracks reaching higher tempos than the other genres shown.
+
+#### 6.Acousticness vs. Track Popularity
+
+```{r}
+ggplot(data, aes(x = acousticness, y = track_popularity)) +
+    geom_point(alpha = 0.5) +
+    labs(title = "Acousticness vs. Track Popularity", x = "Acousticness", y = "Popularity") +
+    theme_minimal()
+
+```
+
+There is a high density of points clustered around the lower end of the acousticness scale, indicating that there are many tracks with low acousticness in the dataset.
+
+There is no clear visual evidence from this plot alone to suggest that acousticness has a strong influence on popularity; tracks across the entire range of acousticness have varying levels of popularity.
+
+## Explore numeric features against popularity(Correlation Matrix)
+
+```{r}
+numeric_features <- c("danceability", "energy", "loudness", "speechiness", 
+                      "acousticness", "instrumentalness", "liveness", "valence", "tempo", "duration_min", "key","track_age_years")
+
+# Generate the correlation matrix for numeric features and popularity
+cor_data <- data %>% select(track_popularity, one_of(numeric_features))
+cor_matrix <- cor(cor_data, use = "complete.obs")
+
+# Plotting the correlations
+library(corrplot)
+corrplot::corrplot(cor_matrix, method = "circle")
+```
+
+1.  **rack_popularity**: It has some level of positive correlation with **`loudness`**, **`energy`**, and to a lesser extent with **`danceability`**. This suggests that louder, more energetic, and more danceable tracks tend to be more popular.
+
+2.  **danceability**: Shows positive correlations with **`valence`** and **`energy`**, which makes sense as danceable tracks are often more upbeat and energetic.
+
+3.  **energy**: Has a strong positive correlation with **`loudness`**, indicating that tracks perceived as more energetic also tend to be louder. There's also a notable positive correlation with **`valence`**.
+
+4.  **acousticness**: Has a strong negative correlation with **`energy`** and **`loudness`**, suggesting that acoustic tracks are often quieter and less energetic.
+
+5.  **instrumentalness**: Appears to have a negative correlation with **`track_popularity`**, indicating that tracks with more vocal content might be more popular.
+
+6.  **valence**: Shows a positive correlation with **`danceability`** and **`energy`**, but only a slight positive correlation with **`track_popularity`**.
+
+7.  **key**: There's no strong correlation visible between **`key`** and **`track_popularity`**, which aligns with the expectation that the key of a track is not a strong predictor of its popularity.
+
+8.  **duration_min**: Does not show a strong correlation with **`track_popularity`**, suggesting that the length of a track is not a significant factor in its popularity.
+
+9.  **tempo**: Seems to have a very slight positive correlation with **`track_popularity`**, but not strong enough to make a definitive statement.
+
+10. **track_age_years**: There seems to be a negative correlation between **`track_popularity`** and **`track_age_years`**. This could suggest that newer tracks (with a lower age in years) tend to be more popular. This is a sensible finding as newer songs may be more likely to trend or be featured in current playlists.
+
+## Modeling
+
+#### 1. Null model
+
+```{r}
+null_model <- glm(track_popularity ~ 1, data = data, family = gaussian())
+summary(null_model)
+```
+
+#### 2. Complete pooling
+
+```{r}
+complete_pooling_model <- glm(track_popularity ~ danceability + energy + loudness + speechiness + acousticness + instrumentalness + liveness + valence + tempo + duration_min + key + track_age_years, data = data, family = gaussian())
+summary(complete_pooling_model)
+```
