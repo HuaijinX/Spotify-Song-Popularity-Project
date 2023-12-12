@@ -10,8 +10,6 @@ editor: visual
 
 This project aims to identify the key features that predict the popularity of songs on Spotify. I get the data set on Kaggle.com and I did the data cleaning and exploratory data analythis. Then, after building a null model, I employed generalized linear models for 3 different pooling method and with log transformation to examine the relationship between track popularity and a variety of predictors including playlist genre, playlist subgenre, and intrinsic audio features such as danceability, energy, acousticness, instrumentalness, liveness, duration, and age of the track. I use residual plot and AIC to compare the performance of different models. The analysis identifies significant predictors including playlist genre, subgenre, and various audio features. Notably, genres such as Latin, Pop, R&B, and Rap are positively correlated with popularity, while certain subgenres like 'Electropop' and 'Gangster Rap' show a negative association. Audio features such as danceability positively influence popularity, whereas energy and instrumentalness exhibit negative effects, suggesting a preference for vocal-driven and moderately energetic tracks. Moreover, shorter track durations and newer releases trend towards higher popularity, aligning with current listening preferences.The findings offer strategic insights for stakeholders in the music industry and highlight areas for further research in the evolving domain of digital music consumption.
 
-{{< pagebreak >}}
-
 ## Introduction
 
 I get the data set from Kaggle and here is the URL of the dataset:
@@ -71,8 +69,6 @@ The data consist more than 30000 Spotify songs from the Spotify API. It consists
 +--------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------+
 | duration_ms              | Duration of song in milliseconds                                                                                                                |
 +--------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------+
-
-{{< pagebreak >}}
 
 #### Data Cleaning:
 
@@ -149,8 +145,6 @@ data <- select(data, -playlist_id, -playlist_name )
 head(data,3)
 ```
 
-{{< pagebreak >}}
-
 ## EDA Plots
 
 I generated 6 Exploratory Data Analysis plots and a correlation matrix with numerical variables. Here are the plots and descriptions:
@@ -199,8 +193,6 @@ ggplot(data, aes(x = playlist_genre, y = track_popularity)) +
 -   There is substantial variability within each genre, as indicated by the interquartile range (the height of the boxes).
 
 -   Outliers exist in all genres, suggesting that there are tracks with popularity scores that are significantly higher or lower than the typical range for their genre.
-
-{{< pagebreak >}}
 
 #### 4.Popularity by Subgenre
 
@@ -253,8 +245,6 @@ There is a high density of points clustered around the lower end of the acoustic
 
 There is no clear visual evidence from this plot alone to suggest that acousticness has a strong influence on popularity; tracks across the entire range of acousticness have varying levels of popularity.
 
-{{< pagebreak >}}
-
 #### Explore numeric features against popularity(Correlation Matrix)
 
 ```{r}
@@ -290,8 +280,6 @@ corrplot::corrplot(cor_matrix, method = "circle")
 
 10. **track_age_years**: There seems to be a negative correlation between **`track_popularity`** and **`track_age_years`**. This could suggest that newer tracks (with a lower age in years) tend to be more popular. This is a sensible finding as newer songs may be more likely to trend or be featured in current playlists.
 
-{{< pagebreak >}}
-
 ## Modeling
 
 The `track_popularity` is a numeric number ranging from 0 to 100. So i am going to use linear model to fit the data. I will firstly create a Null Model which would establish a baseline which is useful for comparison, as it represents the simplest form of prediction (usually predicting the mean or median of the dependent variable). Then I am going to use different pooling methods and transformation method to get one "best" model.
@@ -311,8 +299,6 @@ The AIC is 286890, which on its own doesn't say much, but it can be used to comp
 
 -   AIC not only rewards goodness of fit but also includes a penalty that increases with the number of estimated parameters; this discourages overfitting.
 
-{{< pagebreak >}}
-
 #### 2. Complete pooling
 
 After getting the output of Null model. I start to consider complete pooling method, which is ignore all character variables(`track_genres` and `track_subgenres`) and assume they are all in same group. The linear regression is always a good way to start with. As the correlation matrix I got before shows that `tempo`, `speechiness`, and `key` are all weekly correlated to `track_popularity`. We only choose other features as predictor.
@@ -325,8 +311,6 @@ summary(complete_pooling_model)
 The result we get from the output is mostly same as the correlation matrix we got. But we can also see that `track_age_years` is considered to be non-significant (with p value of 0.566) on predicting popularity. The predictor mode has estimate about 0.718 which means that major mode is predicted to be more popular than minor mode.
 
 Then we make the residual plot and QQ plot of residual for this model. The residual plot helps identify non-linearity, unequal error variances, and outliers. The residuals should be randomly distributed around the horizontal line at 0. If there are patterns or systematic structures, it suggests issues with the model. And QQ plot helps check the normality of residuals. If the residuals are normally distributed, the points should fall approximately along the reference line. Deviations from this line indicate deviations from normality.
-
-{{< pagebreak >}}
 
 ```{r}
 # Create a dataframe for plotting
@@ -366,8 +350,6 @@ ggplot(qq_complete, aes(sample = StandardizedResiduals)) +
 ```
 
 In the QQ plot, the points deviate significantly from the reference line, especially in the tails. This indicates that the residuals have heavy tails and are not normally distributed.
-
-{{< pagebreak >}}
 
 ##### Log Transfermation
 
@@ -440,8 +422,6 @@ But there seems to be some horizontal lines below in the residual plot. That is 
 In the second QQ plot, the points are closer to the reference line, but there is still some deviation in the tails. It suggests that the residuals are more normally distributed than the first plot, but not perfectly so. However, it is already a good improvement compare to the original model.
 
 I am not sure if the log transformation is appropriate for the discrete response value like `track_popularity`, but the truth that it improves the model tremendously. We can also see that from the AIC report in the output of two models. It decreases from 284506 to 100314. The lower AIC often represent the better model.
-
-{{< pagebreak >}}
 
 #### 3. No pooling
 
@@ -547,8 +527,6 @@ AIC(no_pooling_model)
 
 The values is less than the AIC of complete model which could mean that no pooling model provide a better fit.
 
-{{< pagebreak >}}
-
 #### 4. Partial pooling (multilevel linear model)
 
 For partial pooling, I only take `playlist_subgenre` as so that the model includes fixed effects for several predictors and a random effect for the intercept across different levels of the **`playlist_subgenre`** variable. The reason of not taking `playlist_genre` as well is that there is no additional variation in `track_popularity` attributed to the `playlist_genre beyond` what is already explained by the `playlist_subgenre` and other factors in the model since `playlist_subgenre` is the subgroup of the other.
@@ -636,8 +614,6 @@ The partial pooling model has a slightly lower AIC (98603.72) than the complete 
 
 However, it is lower than AIC of no_pooling_model (98469.5). Also, No pooling models are often more complex as they estimate more parameters (one for each group/category). AIC penalizes complexity, so a lower AIC for a no pooling model suggests it provides sufficiently better fit to outweigh its increased complexity.
 
-{{< pagebreak >}}
-
 ## Conclusion
 
 We can drive to a conclusion that the no pooling model fits best to my data set compare to complete pooling and partial pooling. So according to its output:
@@ -659,8 +635,6 @@ Track duration and age also play pivotal roles. Shorter tracks and newer release
 The result I get is quite similar to Matt Devor's study *Predicting Spotify Song Popularity.* He comes to the same results that danceability, energy, and Instrumentalness are 3 predictors which affect most on polularity. Also, the danceability has the positive effect while the other 2 has the negative effect. However, he defined popularity as a boolean variable and uses logistic regression instead, and he did not put genres and sub-genres as consideration.
 
 In conclusion, our analytical journey reveals the multifaceted nature of musical popularity on digital platforms. The findings not only offer a valuable resource for artists, producers, and marketers in strategizing their offerings but also pave the way for future research to further demystify the dynamics of popularity in the digital age of music.
-
-{{< pagebreak >}}
 
 ## Reference
 
