@@ -1,44 +1,99 @@
 ---
-title: "EDA"
+title: "MA678 Midterm Project: What features of a song predict its Popularity on Spotify"
 author: "Huaijin Xin"
+date: 2023-12-12
 format: html
 editor: visual
 ---
 
-## MA678 Midterm Project EDA report
+## Abstract
 
-Here is the EDA report for the spotify_song data set. The report consists description of the data set, cleaning procedure, and EDA plots.
+This project aims to identify the key features that predict the popularity of songs on Spotify. I get the data set on Kaggle.com and I did the data cleaning and exploratory data analythis. Then, after building a null model, I employed generalized linear models for 3 different pooling method and with log transformation to examine the relationship between track popularity and a variety of predictors including playlist genre, playlist subgenre, and intrinsic audio features such as danceability, energy, acousticness, instrumentalness, liveness, duration, and age of the track. I use residual plot and AIC to compare the performance of different models. The analysis identifies significant predictors including playlist genre, subgenre, and various audio features. Notably, genres such as Latin, Pop, R&B, and Rap are positively correlated with popularity, while certain subgenres like 'Electropop' and 'Gangster Rap' show a negative association. Audio features such as danceability positively influence popularity, whereas energy and instrumentalness exhibit negative effects, suggesting a preference for vocal-driven and moderately energetic tracks. Moreover, shorter track durations and newer releases trend towards higher popularity, aligning with current listening preferences.The findings offer strategic insights for stakeholders in the music industry and highlight areas for further research in the evolving domain of digital music consumption.
 
-## Datasets:
+{{< pagebreak >}}
 
-spotify_songs.csv
+## Introduction
 
-The data consist Almost 30000 Spotify songs from the Spotify API. Here is the URL for Datacard
+I get the data set from Kaggle and here is the URL of the dataset:
 
 <https://www.kaggle.com/datasets/joebeachcapital/30000-spotify-songs/data>
 
-## Data Cleaning:
+The data consist more than 30000 Spotify songs from the Spotify API. It consists 23 columns which are the features of the songs. Here is the description of all features of raw data set:
 
-Here is view of raw data:
++--------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------+
+| Features                 | Description                                                                                                                                     |
++==========================+=================================================================================================================================================+
+| track_id                 | Song unique ID                                                                                                                                  |
++--------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------+
+| track_name               | Song Name                                                                                                                                       |
++--------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------+
+| track_artist             | Song Artist                                                                                                                                     |
++--------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------+
+| track_popularity         | Song Popularity (0-100) where higher is better                                                                                                  |
++--------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------+
+| track_album_id           | Album unique ID                                                                                                                                 |
++--------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------+
+| track_album_name         | Song album name                                                                                                                                 |
++--------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------+
+| track_album_release_date | Date when album released                                                                                                                        |
++--------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------+
+| playlist_name            | Name of playlist                                                                                                                                |
++--------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------+
+| playlist_id              | Playlist ID                                                                                                                                     |
++--------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------+
+| playlist_genre           | Playlist genre                                                                                                                                  |
++--------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------+
+| playlist_subgenre        | Playlist subgenre                                                                                                                               |
++--------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------+
+| danceability             | How suitable a track is for dancing                                                                                                             |
++--------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------+
+| energy                   | A perceptual measure of intensity and activity.                                                                                                 |
++--------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------+
+| key                      | 0 = C, 1 = C♯/D♭, 2 = D, and so on. If no key was detected, the value is -1                                                                     |
++--------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------+
+| loudness                 | The overall loudness of a track in decibels (dB)                                                                                                |
++--------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------+
+| mode                     | Major is represented by 1 and minor is 0                                                                                                        |
++--------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------+
+| speechiness              | The presence of spoken words in a track. The more exclusively speech-like the recording (e.g. talk show, audio book, poetry), the closer to 1.0 |
++--------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------+
+| acousticness             | A confidence measure from 0.0 to 1.0 of whether the track is acoustic                                                                           |
++--------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------+
+| instramentalness         | Predicts whether a track contains no vocals                                                                                                     |
+|                          |                                                                                                                                                 |
+|                          | The closer the instrumentalness value is to 1.0, the greater likelihood the track contains no vocal content.                                    |
++--------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------+
+| liveness                 | Detects the presence of an audience in the recording                                                                                            |
++--------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------+
+| valence                  | A measure from 0.0 to 1.0 describing the musical positiveness conveyed by a track                                                               |
++--------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------+
+| tempo                    | The overall estimated tempo of a track in beats per minute (BPM)                                                                                |
++--------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------+
+| duration_ms              | Duration of song in milliseconds                                                                                                                |
++--------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------+
+
+{{< pagebreak >}}
+
+#### Data Cleaning:
+
+Here is the description of how I clean the data to what I desired. Firstly, Convert `track_album_release_date`to proper format. Then check the null values.
 
 ```{r}
 data <- read.csv("spotify_songs.csv")
-head(data)
+head(data,3)
 ```
 
-Convert date to proper format.
-
 ```{r}
+#Convert date to proper format.
 data$track_album_release_date <- as.Date(data$track_album_release_date)
 ```
 
-Check null values.
-
 ```{r}
+#Check null values.
 colSums(is.na(data))
 ```
 
-Delete all rows which has null values.
+Delete all rows which has null values and check that again.
 
 ```{r}
 library(tidyr)
@@ -46,7 +101,7 @@ data <- data %>% drop_na()
 colSums(is.na(data))
 ```
 
-Convert duration from milliseconds to minutes for easier interpretation and delete original column
+Convert duration from milliseconds to minutes for easier interpretation and delete original column. Then create new features that may be predictive of popularity: age of the track (current date minus track_album_release_date). Then check unique values of character value columns:
 
 ```{r}
 data$duration_min <- data$duration_ms / 60000
@@ -56,8 +111,6 @@ data$duration_min <- data$duration_ms / 60000
 library(dplyr)
 data <- select(data,-duration_ms)
 ```
-
-Create new features that may be predictive of popularity: age of the track (current date minus track_album_release_date)
 
 ```{r}
 data$track_age_days <- as.numeric(Sys.Date() - data$track_album_release_date)
@@ -71,8 +124,6 @@ data <- select(data,-track_album_release_date)
 data <- select(data,-track_age_days)
 ```
 
-Check unique values of character value columns:
-
 ```{r}
 char_cols <- sapply(data, is.character)
 unique_char_counts <- sapply(data[char_cols], function(x) length(unique(x)))
@@ -80,7 +131,9 @@ unique_char_counts
 
 ```
 
-Delete those columns which has so many unique values(track_id, track_name, track_album_name, track_album_id, track_artist, playlist_id, playlist_name).
+Delete those columns which has so many unique values(`track_id,` `track_name`, `track_album_name`, `track_album_id`, `track_artist`, `playlist_id`, `playlist_name`).
+
+And here is the brief view of cleaned data set:
 
 ```{r}
 library(dplyr)
@@ -93,10 +146,14 @@ data <- select(data, -playlist_id, -playlist_name )
 ```
 
 ```{r}
-head(data)
+head(data,3)
 ```
 
+{{< pagebreak >}}
+
 ## EDA Plots
+
+I generated 6 Exploratory Data Analysis plots and a correlation matrix with numerical variables. Here are the plots and descriptions:
 
 #### 1.Distribution of Playlist Genres
 
@@ -142,6 +199,8 @@ ggplot(data, aes(x = playlist_genre, y = track_popularity)) +
 -   There is substantial variability within each genre, as indicated by the interquartile range (the height of the boxes).
 
 -   Outliers exist in all genres, suggesting that there are tracks with popularity scores that are significantly higher or lower than the typical range for their genre.
+
+{{< pagebreak >}}
 
 #### 4.Popularity by Subgenre
 
@@ -194,7 +253,9 @@ There is a high density of points clustered around the lower end of the acoustic
 
 There is no clear visual evidence from this plot alone to suggest that acousticness has a strong influence on popularity; tracks across the entire range of acousticness have varying levels of popularity.
 
-## Explore numeric features against popularity(Correlation Matrix)
+{{< pagebreak >}}
+
+#### Explore numeric features against popularity(Correlation Matrix)
 
 ```{r}
 numeric_features <- c("danceability", "energy", "loudness", "speechiness", 
@@ -209,7 +270,7 @@ library(corrplot)
 corrplot::corrplot(cor_matrix, method = "circle")
 ```
 
-1.  **rack_popularity**: It has some level of positive correlation with **`loudness`**, **`energy`**, and to a lesser extent with **`danceability`**. This suggests that louder, more energetic, and more danceable tracks tend to be more popular.
+1.  **track_popularity**: It has some level of positive correlation with **`loudness`**, **`energy`**, and to a lesser extent with **`danceability`**. This suggests that louder, more energetic, and more danceable tracks tend to be more popular.
 
 2.  **danceability**: Shows positive correlations with **`valence`** and **`energy`**, which makes sense as danceable tracks are often more upbeat and energetic.
 
@@ -229,7 +290,11 @@ corrplot::corrplot(cor_matrix, method = "circle")
 
 10. **track_age_years**: There seems to be a negative correlation between **`track_popularity`** and **`track_age_years`**. This could suggest that newer tracks (with a lower age in years) tend to be more popular. This is a sensible finding as newer songs may be more likely to trend or be featured in current playlists.
 
+{{< pagebreak >}}
+
 ## Modeling
+
+The `track_popularity` is a numeric number ranging from 0 to 100. So i am going to use linear model to fit the data. I will firstly create a Null Model which would establish a baseline which is useful for comparison, as it represents the simplest form of prediction (usually predicting the mean or median of the dependent variable). Then I am going to use different pooling methods and transformation method to get one "best" model.
 
 #### 1. Null model
 
@@ -238,9 +303,371 @@ null_model <- glm(track_popularity ~ 1, data = data, family = gaussian())
 summary(null_model)
 ```
 
+The estimated value for the intercept is 42.7561. Since there are no other predictors in the model, this value is the mean of **`track_popularity`** across all observations in the data.
+
+The AIC is 286890, which on its own doesn't say much, but it can be used to compare this model to other models with the same data.
+
+-   AIC is a measure of the relative quality of statistical models for a given set of data. It's based on two principles: goodness of fit and simplicity (or parsimony) of the model. A lower AIC value generally indicates a better model.
+
+-   AIC not only rewards goodness of fit but also includes a penalty that increases with the number of estimated parameters; this discourages overfitting.
+
+{{< pagebreak >}}
+
 #### 2. Complete pooling
 
+After getting the output of Null model. I start to consider complete pooling method, which is ignore all character variables(`track_genres` and `track_subgenres`) and assume they are all in same group. The linear regression is always a good way to start with. As the correlation matrix I got before shows that `tempo`, `speechiness`, and `key` are all weekly correlated to `track_popularity`. We only choose other features as predictor.
+
 ```{r}
-complete_pooling_model <- glm(track_popularity ~ danceability + energy + loudness + speechiness + acousticness + instrumentalness + liveness + valence + tempo + duration_min + key + track_age_years, data = data, family = gaussian())
+complete_pooling_model <- glm(track_popularity ~ danceability + energy + loudness  + mode + acousticness + instrumentalness + liveness + valence  + duration_min + track_age_years, data = data, family = gaussian())
 summary(complete_pooling_model)
 ```
+
+The result we get from the output is mostly same as the correlation matrix we got. But we can also see that `track_age_years` is considered to be non-significant (with p value of 0.566) on predicting popularity. The predictor mode has estimate about 0.718 which means that major mode is predicted to be more popular than minor mode.
+
+Then we make the residual plot and QQ plot of residual for this model. The residual plot helps identify non-linearity, unequal error variances, and outliers. The residuals should be randomly distributed around the horizontal line at 0. If there are patterns or systematic structures, it suggests issues with the model. And QQ plot helps check the normality of residuals. If the residuals are normally distributed, the points should fall approximately along the reference line. Deviations from this line indicate deviations from normality.
+
+{{< pagebreak >}}
+
+```{r}
+# Create a dataframe for plotting
+residuals_complete_1 <- data.frame(
+  Fitted = fitted(complete_pooling_model),
+  Residuals = resid(complete_pooling_model)
+)
+
+ggplot(residuals_complete_1, aes(x = Fitted, y = Residuals)) +
+  geom_point() +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "red") +
+  labs(title = "Residuals vs Fitted", x = "Fitted Values", y = "Residuals")
+
+```
+
+The residual plot indicates a potential issue with heteroscedasticity, where the variance of the residuals increases with the fitted values. This is a common violation of the assumptions of linear models, which assume that the residuals have constant variance across all levels of the predictor variables (homoscedasticity).
+
+```{r}
+residuals <- resid(complete_pooling_model)
+probs <- ppoints(length(residuals))
+theoretical_quantiles <- qnorm(probs)
+
+qq_complete <- data.frame(
+  Theoretical = theoretical_quantiles,
+  StandardizedResiduals = residuals
+)
+
+
+ggplot(qq_complete, aes(sample = StandardizedResiduals)) +
+  stat_qq() +
+  stat_qq_line(colour = "red") +
+  ggtitle("QQ Plot of Residuals") +
+  xlab("Theoretical Quantiles") +
+  ylab("Standardized Residuals")
+
+
+```
+
+In the QQ plot, the points deviate significantly from the reference line, especially in the tails. This indicates that the residuals have heavy tails and are not normally distributed.
+
+{{< pagebreak >}}
+
+##### Log Transfermation
+
+So I am applying a log transformation into the model to make it non linear. We first look at the log(`track_popularity`+ 1) correlation matrix to determine which predictors we use.
+
+```{r}
+numeric_features <- c("danceability", "energy", "loudness", "speechiness", 
+                      "acousticness", "instrumentalness", "liveness", "valence", "tempo", "duration_min", "key","track_age_years")
+
+# Generate the correlation matrix for numeric features and popularity
+cor_data <- data %>%
+  mutate(log_track_popularity = log(track_popularity + 1)) %>%
+  select(log_track_popularity, one_of(numeric_features))
+cor_matrix <- cor(cor_data, use = "complete.obs")
+
+# Plotting the correlations
+corrplot::corrplot(cor_matrix, method = "circle")
+```
+
+From the correlation matrix, we can see that `loudness`, `speechiness`, `valence`, `tempo`, and `key` are all seems to be non significant on predicting log of `track_popularity`. So we exclude them and get the output.
+
+```{r}
+log_complete_model <- glm(log(track_popularity + 1) ~ danceability + energy + 
+                     acousticness + instrumentalness + liveness + mode+
+                     duration_min + track_age_years, family = gaussian(), data = data)
+
+
+summary(log_complete_model)
+```
+
+Then we generate the residual plot and QQ plot of residual.
+
+```{r}
+model_data <- data.frame(
+  Fitted = fitted(log_complete_model),
+  Residuals = residuals(log_complete_model)
+)
+
+# Plot using ggplot2
+ggplot(model_data, aes(x = Fitted, y = Residuals)) +
+  geom_point() +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "red") +
+  labs(x = "Fitted Values", y = "Residuals") +
+  theme_minimal()
+```
+
+```{r}
+residuals <- resid(log_complete_model)
+probs <- ppoints(length(residuals))
+theoretical_quantiles <- qnorm(probs)
+
+qq_complete <- data.frame(
+  Theoretical = theoretical_quantiles,
+  StandardizedResiduals = residuals
+)
+
+
+ggplot(qq_complete, aes(sample = StandardizedResiduals)) +
+  stat_qq() +
+  stat_qq_line(colour = "red") +
+  ggtitle("QQ Plot of Residuals") +
+  xlab("Theoretical Quantiles") +
+  ylab("Standardized Residuals")
+```
+
+In the new residual plot. The variance of the residuals does not increase as drastically with the fitted values compared to the original GLM fit. Moreover, the residuals are more closely distributed around the red line for the middle range of fitted values, indicating that the variance is more constant in this region.
+
+But there seems to be some horizontal lines below in the residual plot. That is because the `track_popularity` is the integer values ranging from 0 to 100, which are discrete. And by looking at my second EDA plot, we know that there are lots of 0s or 1s or other integer values close to 0 in `track_popularity`. Then the residuals may cluster at specific levels corresponding to these discrete values. After a transformation like logarithm, these become horizontal lines because the transformation doesn't convert the discrete variable into a continuous one.
+
+In the second QQ plot, the points are closer to the reference line, but there is still some deviation in the tails. It suggests that the residuals are more normally distributed than the first plot, but not perfectly so. However, it is already a good improvement compare to the original model.
+
+I am not sure if the log transformation is appropriate for the discrete response value like `track_popularity`, but the truth that it improves the model tremendously. We can also see that from the AIC report in the output of two models. It decreases from 284506 to 100314. The lower AIC often represent the better model.
+
+{{< pagebreak >}}
+
+#### 3. No pooling
+
+Then we do the no pooling method that is consider all values in `track_genres` and `track_subgenres` as separate groups.
+
+```{r}
+no_pooling_model <- glm(log(track_popularity + 1) ~ playlist_genre + playlist_subgenre + danceability + energy + 
+                     acousticness + instrumentalness + liveness + 
+                     duration_min + track_age_years, family = gaussian(), data = data)
+summary(no_pooling_model)
+
+```
+
+-   The **`playlist_genre`** and **`playlist_subgenre`** variables show varying effects on track popularity. For example, **`playlist_genrelatin`** has a positive association with `track_popularity`, indicating that Latin genres tend to have higher popularity scores.
+
+-   Audio features also have significant effects. **`danceability`** and **`energy`** have positive and negative coefficients, respectively, implying that tracks that are more dancable tend to be more popular, while tracks with higher energy scores tend to be less popular.
+
+-   **`Instrumentalness`** has a negative association, suggesting that tracks with more instrumental content are less popular.
+
+-   The negative coefficient for **`track_age_years`** implies that newer tracks tend to be more popular, all else being equal.
+
+Then let us look at the overal residual plot and the QQ plot of residual for the no pooling model.
+
+```{r}
+residuals_no_pooling <- data.frame(
+  Fitted = fitted(no_pooling_model),
+  Residuals = resid(no_pooling_model)
+)
+
+ggplot(residuals_no_pooling, aes(x = Fitted, y = Residuals)) +
+  geom_point() +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "red") +
+  labs(title = "Residuals vs Fitted", x = "Fitted Values", y = "Residuals")
+```
+
+```{r}
+residuals <- resid(no_pooling_model)
+probs <- ppoints(length(residuals))
+theoretical_quantiles <- qnorm(probs)
+
+qq_complete <- data.frame(
+  Theoretical = theoretical_quantiles,
+  StandardizedResiduals = residuals
+)
+
+ggplot(qq_complete, aes(sample = StandardizedResiduals)) +
+  stat_qq() +
+  stat_qq_line(colour = "red") +
+  ggtitle("QQ Plot of Residuals") +
+  xlab("Theoretical Quantiles") +
+  ylab("Standardized Residuals")
+```
+
+The residual plot and QQ plot of residual for no pooling model is very similar to those for complete pooling model. We can not see clearly which model is better by just looking at the residual plots.
+
+Then I generate the group level residual plots, first looking at 6 genres.
+
+```{r}
+residuals_no_pooling$playlist_genre <- data$playlist_genre
+residuals_no_pooling$playlist_subgenre <- data$playlist_subgenre
+
+# Plot group-level residuals by playlist_genre
+ggplot(residuals_no_pooling, aes(x = Fitted, y = Residuals)) +
+  geom_point(alpha = 0.5) +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  facet_wrap(~ playlist_genre, scales = "free") +  # Use 'scales = "free"' to allow different scales for each facet
+  labs(x = "Fitted Values", y = "Residuals", title = "Group-Level Residual Plot by Playlist Genre") +
+  theme_minimal()
+```
+
+-   The spread of residuals (vertical dispersion) in the R&B and Rock genres appears to be slightly larger than in the other genres, suggesting more variability in the prediction errors for these genres.
+
+-   Genres like EDM, Latin, and Pop seem to have a tighter vertical spread, indicating more consistent prediction errors.
+
+-   The range of fitted values (horizontal axis) is similar across all genres, primarily between 2.0 and 4.5. This suggests that the independent variable(s) the model is using to make predictions have a similar scale across genres.
+
+Then let us look at 24 sub-genres group level residual plots.
+
+```{r}
+ggplot(residuals_no_pooling, aes(x = Fitted, y = Residuals)) +
+  geom_point(alpha = 0.5) +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  facet_wrap(~ playlist_subgenre, scales = "free", ncol = 4) +  # Adjust ncol for a better layout
+  labs(x = "Fitted Values", y = "Residuals", title = "Group-Level Residual Plot by Playlist Subgenre") +
+  theme_minimal()
+```
+
+**Spread of Residuals:** The spread of residuals in most sub-genres seems relatively consistent across different levels of fitted values, although some plots do show signs of increasing spread with larger fitted values, indicating potential heteroscedasticity.
+
+**Some specific observations:**
+
+-   **Hip Hop vs. Neo Soul:** The 'hip hop' subgenre shows a wider range of fitted values and potentially more variance in residuals than 'neo soul', which seems to have a more compact clustering of points.
+
+-   **Permanent Wave vs. Classic Rock:** 'Permanent wave' displays a wider spread in both residuals and fitted values compared to 'classic rock', suggesting that the latter has a more consistent relationship between the predictors and response variable within the model.
+
+-   **Dance Pop vs. Indie Poptimism:** The 'dance pop' subgenre shows a more pronounced increase in the spread of residuals as fitted values increase compared to 'indie poptimism', which remains more constant.
+
+Then calculate the AIC range of no pooling models:
+
+```{r}
+AIC(no_pooling_model)
+```
+
+The values is less than the AIC of complete model which could mean that no pooling model provide a better fit.
+
+{{< pagebreak >}}
+
+#### 4. Partial pooling (multilevel linear model)
+
+For partial pooling, I only take `playlist_subgenre` as so that the model includes fixed effects for several predictors and a random effect for the intercept across different levels of the **`playlist_subgenre`** variable. The reason of not taking `playlist_genre` as well is that there is no additional variation in `track_popularity` attributed to the `playlist_genre beyond` what is already explained by the `playlist_subgenre` and other factors in the model since `playlist_subgenre` is the subgroup of the other.
+
+```{r}
+
+library(lme4)
+partial_pooling_model <- lmer(log(1+track_popularity) ~ danceability + energy + 
+                     acousticness + instrumentalness + liveness + 
+                     duration_min + track_age_years+ (1 | playlist_subgenre), data = data)
+summary(partial_pooling_model)
+
+```
+
+**Random Effects:**
+
+-   **`playlist_subgenre`** has a variance of 0.1017 and a standard deviation of 0.3189 for the intercept, indicating there is some variation in track popularity across different sub-genres.
+
+-   The residual variance is 1.4098 with a standard deviation of 1.1873, which reflects the variation in track popularity not explained by the model's fixed and random effects.
+
+**Fixed Effects:**
+
+-   The intercept (4.0072505) represents the log-transformed predicted popularity when all other predictors are held at zero. Given the log transformation, we interpret this as the exponential of the intercept giving the multiplicative effect on the track popularity when other predictors are at their reference levels.
+
+-   **`danceability`**, **`energy`**, **`acousticness`**, **`instrumentalness`**, **`liveness`**, **`duration_min`**, and **`track_age_years`** are your fixed effects, each with their respective estimates and standard errors.
+
+-   The **`t values`** suggest the strength and direction of the relationship between each predictor and the log-transformed track popularity. Larger absolute values suggest stronger evidence against the null hypothesis (that the true coefficient is zero).
+
+    -   **`danceability`** has a positive effect on track popularity.
+
+    -   **`energy`** has a negative effect.
+
+    -   **`acousticness`** has a small positive effect, but with a t-value of 1.140, it might not be statistically significant.
+
+    -   **`instrumentalness`** has a strong negative effect.
+
+    -   **`liveness`** has a negative effect.
+
+    -   **`duration_min`** has a negative effect.
+
+    -   **`track_age_years`** has a very small negative effect.
+
+Then, we look at the residuals:
+
+```{r}
+residuals_partial_pooling <- data.frame(
+  Fitted = fitted(partial_pooling_model),
+  Residuals = resid(partial_pooling_model)
+)
+
+ggplot(residuals_partial_pooling, aes(x = Fitted, y = Residuals)) +
+  geom_point() +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "red") +
+  labs(title = "Residuals vs Fitted", x = "Fitted Values", y = "Residuals")
+```
+
+```{r}
+residuals <- resid(partial_pooling_model)
+probs <- ppoints(length(residuals))
+theoretical_quantiles <- qnorm(probs)
+
+qq_complete <- data.frame(
+  Theoretical = theoretical_quantiles,
+  StandardizedResiduals = residuals
+)
+
+ggplot(qq_complete, aes(sample = StandardizedResiduals)) +
+  stat_qq() +
+  stat_qq_line(colour = "red") +
+  ggtitle("QQ Plot of Residuals") +
+  xlab("Theoretical Quantiles") +
+  ylab("Standardized Residuals")
+```
+
+The residuals look nearly exactly the same as no_pooling_model. It is hard to compare them by visualizing the residual plots.
+
+So let's calculate the AIC of partial pooling model and compare it with other models.
+
+```{r}
+model_aic <- AIC(partial_pooling_model)
+print(model_aic)
+```
+
+The partial pooling model has a slightly lower AIC (98603.72) than the complete pooling model(100313.5), suggesting it might be a better fit for the data. This makes sense as the partial pooling model accounts for group-level variability (through **`playlist_subgenre`**), which the complete pooling model does not.
+
+However, it is lower than AIC of no_pooling_model (98469.5). Also, No pooling models are often more complex as they estimate more parameters (one for each group/category). AIC penalizes complexity, so a lower AIC for a no pooling model suggests it provides sufficiently better fit to outweigh its increased complexity.
+
+{{< pagebreak >}}
+
+## Conclusion
+
+We can drive to a conclusion that the no pooling model fits best to my data set compare to complete pooling and partial pooling. So according to its output:
+
+```{r}
+summary(no_pooling_model)
+```
+
+The genre and subgenre of a playlist bear a substantial impact on a track's popularity. The coefficients for genres such as Latin, Pop, R&B, and Rap stand out with strong positive estimates, underscoring their favorable influence. Notably, the Pop genre emerges as a particularly potent predictor, indicative of its broad appeal and potential for engagement on the platform.
+
+Among the subgenres, a diversified influence is evident. While 'Big Room' and 'Electro House' subgenres show a positive relationship with track popularity, 'Electropop' and 'Gangster Rap' reveal a negative association, suggesting a more nuanced listener preference within these categories. This dichotomy highlights the complexity of musical tastes and the importance of tailoring to specific audience segments.
+
+The audio features danceability, energy, and instrumentalness display a profound effect on track popularity. Danceability enhances a track's appeal, perhaps reflecting a universal penchant for rhythm and movement. Conversely, higher energy levels correlate negatively with popularity, pointing towards a preference for more moderate or varied energy levels in music consumption.
+
+Instrumentalness, exhibiting a negative correlation, suggests that tracks with prominent vocal content are more likely to resonate with listeners on Spotify. The negative coefficient associated with liveness may imply that studio-produced tracks are preferred over live recordings.
+
+Track duration and age also play pivotal roles. Shorter tracks and newer releases tend to be more popular, reflecting contemporary listening habits that favor brevity and novelty.
+
+The result I get is quite similar to Matt Devor's study *Predicting Spotify Song Popularity.* He comes to the same results that danceability, energy, and Instrumentalness are 3 predictors which affect most on polularity. Also, the danceability has the positive effect while the other 2 has the negative effect. However, he defined popularity as a boolean variable and uses logistic regression instead, and he did not put genres and sub-genres as consideration.
+
+In conclusion, our analytical journey reveals the multifaceted nature of musical popularity on digital platforms. The findings not only offer a valuable resource for artists, producers, and marketers in strategizing their offerings but also pave the way for future research to further demystify the dynamics of popularity in the digital age of music.
+
+{{< pagebreak >}}
+
+## Reference
+
+Joakim Arvidsson, *3000 Spotify Songs*
+
+<https://www.kaggle.com/datasets/joebeachcapital/30000-spotify-songs/data>
+
+Matt Devor, *Predicting Spotify Song Popularity*
+
+<https://github.com/MattD82/Predicting-Spotify-Song-Popularity/blob/master/README.md>
